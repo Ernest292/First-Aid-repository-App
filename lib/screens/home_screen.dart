@@ -1,4 +1,5 @@
 // lib/screens/home_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../db/database_helper.dart';
 import '../models/first_aid.dart';
@@ -28,10 +29,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _refreshList() async {
     setState(() => loading = true);
 
-    // Load all items
     final allItems = await dbHelper.readAllFirstAids();
 
-    // Apply search manually (web & mobile)
+    // Apply search manually (mobile & web)
     items = allItems.where((item) {
       final text = (item.title + " " + item.description).toLowerCase();
       return text.contains(searchQuery.toLowerCase());
@@ -83,8 +83,9 @@ class _HomeScreenState extends State<HomeScreen> {
                   },
                 )
                     : null,
-                border:
-                OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
               onChanged: (text) {
                 setState(() => searchQuery = text);
@@ -113,8 +114,10 @@ class _HomeScreenState extends State<HomeScreen> {
             return FirstAidCard(
               item: item,
               onTap: () async {
-                await Navigator.of(context).push(MaterialPageRoute(
-                    builder: (_) => DetailScreen(item: item)));
+                await Navigator.of(context).push(
+                  MaterialPageRoute(
+                      builder: (_) => DetailScreen(item: item)),
+                );
               },
               onEdit: () => _openEdit(item),
               onDelete: () async {
@@ -136,7 +139,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                 );
-                if (ok == true) _deleteItem(item.id!);
+                if (ok == true && item.id != null) {
+                  _deleteItem(item.id!);
+                }
               },
             );
           },

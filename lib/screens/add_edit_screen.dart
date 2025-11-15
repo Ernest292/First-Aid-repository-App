@@ -1,17 +1,13 @@
-// lib/screens/add_edit_screen.dart
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import '../models/first_aid.dart';
 import '../db/database_helper.dart';
 
-// Image picker mobile only
-import 'package:image_picker/image_picker.dart';
-import 'dart:io';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
-
 class AddEditScreen extends StatefulWidget {
   final FirstAid? existing;
-  const AddEditScreen({Key? key, this.existing}) : super(key: key);
+  const AddEditScreen({super.key, this.existing});
 
   @override
   State<AddEditScreen> createState() => _AddEditScreenState();
@@ -21,17 +17,16 @@ class _AddEditScreenState extends State<AddEditScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _titleController;
   late TextEditingController _descriptionController;
+  late TextEditingController _instructionsController;
   String? _imagePath;
   bool _saving = false;
 
   @override
   void initState() {
     super.initState();
-
-    _titleController =
-        TextEditingController(text: widget.existing?.title ?? '');
-    _descriptionController =
-        TextEditingController(text: widget.existing?.description ?? '');
+    _titleController = TextEditingController(text: widget.existing?.title ?? '');
+    _descriptionController = TextEditingController(text: widget.existing?.description ?? '');
+    _instructionsController = TextEditingController(text: widget.existing?.instructions ?? '');
     _imagePath = widget.existing?.imagePath;
   }
 
@@ -39,29 +34,17 @@ class _AddEditScreenState extends State<AddEditScreen> {
   void dispose() {
     _titleController.dispose();
     _descriptionController.dispose();
+    _instructionsController.dispose();
     super.dispose();
   }
 
-  // Pick image (mobile only)
   Future<void> _pickImage() async {
-    try {
-      final picker = ImagePicker();
-      final XFile? xfile =
-      await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (kIsWeb) return; // image picking disabled on web
 
-      if (xfile == null) return;
-
-      final temp = File(xfile.path);
-      final appDir = await getApplicationDocumentsDirectory();
-      final fileName =
-          '${DateTime.now().millisecondsSinceEpoch}_${p.basename(xfile.path)}';
-      final saved = await temp.copy('${appDir.path}/$fileName');
-
-      setState(() => _imagePath = saved.path);
-    } catch (e) {
-      // Safe fallback for web
-      debugPrint("Image picker not supported on this platform.");
-    }
+    final picker = ImagePicker();
+    final XFile? xfile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (xfile == null) return;
+    setState(() => _imagePath = xfile.path);
   }
 
   Future<void> _save() async {
@@ -69,30 +52,35 @@ class _AddEditScreenState extends State<AddEditScreen> {
     setState(() => _saving = true);
 
     final helper = DatabaseHelper.instance;
+    String? finalImagePath = _imagePath;
+
+    // Upload image to Supabase if local file
+    if (_imagePath != null && !kIsWeb && !_imagePath!.startsWith('http')) {
+      final file = File(_imagePath!);
+      final fileName = 'images/${DateTime.now().millisecondsSinceEpoch}_${file.uri.pathSegments.last}';
+      final url = await helper.uploadImage(file, fileName);
+      if (url != null) finalImagePath = url;
+    }
 
     if (widget.existing == null) {
-      // Create new record
       final newItem = FirstAid(
         title: _titleController.text.trim(),
         description: _descriptionController.text.trim(),
-        instructions:
-        '', // blank instructions since not used anymore
-        imagePath: _imagePath,
+        instructions: _instructionsController.text.trim(),
+        imagePath: finalImagePath,
       );
       await helper.createFirstAid(newItem);
     } else {
-      // Update existing
       final updated = widget.existing!;
       updated.title = _titleController.text.trim();
       updated.description = _descriptionController.text.trim();
-      updated.instructions = ''; // empty
-      updated.imagePath = _imagePath;
-
+      updated.instructions = _instructionsController.text.trim();
+      updated.imagePath = finalImagePath;
+      updated.updatedAt = DateTime.now();
       await helper.updateFirstAid(updated);
     }
 
     setState(() => _saving = false);
-
     if (mounted) Navigator.pop(context, true);
   }
 
@@ -101,68 +89,51 @@ class _AddEditScreenState extends State<AddEditScreen> {
     final isEditing = widget.existing != null;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(isEditing ? "Edit Item" : "Add Item"),
-      ),
+      appBar: AppBar(title: Text(isEditing ? "Edit Topic" : "Add Topic")),
       body: Padding(
         padding: const EdgeInsets.all(14.0),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              // TITLE
               TextFormField(
                 controller: _titleController,
-                decoration: const InputDecoration(
-                  labelText: 'Title (ex: Bleeding)',
-                ),
-                validator: (v) =>
-                (v == null || v.trim().isEmpty) ? "Enter a title" : null,
+                decoration: const InputDecoration(labelText: 'Title'),
+                validator: (v) => (v == null || v.trim().isEmpty) ? "Enter a title" : null,
               ),
-
               const SizedBox(height: 12),
-
-              // DESCRIPTION
               TextFormField(
                 controller: _descriptionController,
-                decoration: const InputDecoration(
-                  labelText: 'Short description',
-                ),
-                validator: (v) => (v == null || v.trim().isEmpty)
-                    ? "Enter a short description"
-                    : null,
+                decoration: const InputDecoration(labelText: 'Short description'),
+                validator: (v) => (v == null || v.trim().isEmpty) ? "Enter a description" : null,
                 maxLines: 2,
               ),
-
-              const SizedBox(height: 20),
-
-              // IMAGE PICKER
-              ElevatedButton.icon(
-                onPressed: _pickImage,
-                icon: const Icon(Icons.image),
-                label: const Text("Select Image"),
+              const SizedBox(height: 12),
+              TextFormField(
+                controller: _instructionsController,
+                decoration: const InputDecoration(labelText: 'Instructions', alignLabelWithHint: true),
+                validator: (v) => (v == null || v.trim().isEmpty) ? "Enter instructions" : null,
+                maxLines: 5,
               ),
-
+              const SizedBox(height: 20),
+              if (!kIsWeb)
+                ElevatedButton.icon(
+                  onPressed: _pickImage,
+                  icon: const Icon(Icons.image),
+                  label: const Text("Select Image"),
+                ),
               const SizedBox(height: 10),
-
               if (_imagePath != null)
                 ClipRRect(
                   borderRadius: BorderRadius.circular(8),
-                  child: Image.file(
-                    File(_imagePath!),
-                    height: 150,
-                    fit: BoxFit.cover,
-                  ),
+                  child: kIsWeb || _imagePath!.startsWith('http')
+                      ? Image.network(_imagePath!, height: 150, fit: BoxFit.cover)
+                      : Image.file(File(_imagePath!), height: 150, fit: BoxFit.cover),
                 ),
-
-              const SizedBox(height: 20),
-
-              // SAVE BUTTON
+              const SizedBox(height: 25),
               ElevatedButton(
                 onPressed: _saving ? null : _save,
-                child: _saving
-                    ? const CircularProgressIndicator()
-                    : Text(isEditing ? "Update" : "Save"),
+                child: _saving ? const CircularProgressIndicator() : Text(isEditing ? "Update" : "Save"),
               ),
             ],
           ),
