@@ -44,7 +44,7 @@ class FirstAidCard extends StatelessWidget {
             color: Colors.grey[300],
             borderRadius: BorderRadius.circular(6),
           ),
-          child: const Icon(Icons.medical_services, color: Colors.white),
+          child: const Icon(Icons.medical_services, color: Colors.red),
         ),
         title: Text(item.title),
         subtitle: Text(
