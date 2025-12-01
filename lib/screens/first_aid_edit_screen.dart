@@ -109,7 +109,7 @@ class _FirstAidEditScreenState extends State<FirstAidEditScreen> {
               // IMAGE BLOCK — Auto Resizing with rounding
               if (selectedImageBytes != null)
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(50),
                   child: Image.memory(
                     selectedImageBytes!,
                     width: imageWidth,
@@ -119,7 +119,7 @@ class _FirstAidEditScreenState extends State<FirstAidEditScreen> {
                 )
               else if (widget.existing?.imagePath != null)
                 ClipRRect(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(50),
                   child: Image.network(
                     SupabaseService.getPublicImageUrl(widget.existing!.imagePath!),
                     width: imageWidth,
@@ -135,7 +135,7 @@ class _FirstAidEditScreenState extends State<FirstAidEditScreen> {
                 child: const Text("Choose Image"),
               ),
 
-              const SizedBox(height: 30),
+              const SizedBox(height: 100),
 
               ElevatedButton(
                 onPressed: save,

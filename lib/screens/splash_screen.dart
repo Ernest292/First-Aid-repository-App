@@ -48,8 +48,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 duration: const Duration(milliseconds: 1500),
                 child: Image.asset(
                   'lib/assets/icon/app_icon.jpg',
-                  width: 200,  // made larger
-                  height: 200,
+                  width: 500,  // made larger
+                  height: 500,
                   fit: BoxFit.contain,
                 ),
               ),
