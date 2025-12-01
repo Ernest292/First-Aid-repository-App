@@ -1,11 +1,11 @@
 [build]
   command = """
-    git clone https://github.com/flutter/flutter.git
-    cd flutter
-    git checkout stable
-    cd ..
-    export PATH="$PATH:`pwd`/flutter/bin"
-    flutter doctor
-    flutter build web --release
+git clone https://github.com/flutter/flutter.git
+cd flutter
+git checkout stable
+cd ..
+export PATH="$PATH:`pwd`/flutter/bin"
+flutter doctor
+flutter build web --release
   """
   publish = "build/web"
